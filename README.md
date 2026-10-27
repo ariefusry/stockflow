@@ -1,40 +1,40 @@
 # StockFlow
-Mini ERP untuk inventori dan penjualan: Go + PostgreSQL di backend, React + TypeScript (Vite) di frontend.
+Mini ERP for inventory and sales: Go + PostgreSQL on the backend, React + TypeScript (Vite) on the frontend.
 
-## Menjalankan
-Semua service sekaligus (Postgres dengan migrasi dan seed, backend, frontend):
+## Running
+All services at once (Postgres with migrations and seed data, backend, frontend):
 
     docker compose up --build
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8080
-- Postgres: localhost:5433 (user, password, dan database: stockflow)
+- Postgres: localhost:5433 (user, password, and database: stockflow)
 
-Mode dev (hanya database di Docker):
+Dev mode (database only in Docker):
 
     docker compose up -d db
     cd backend && go run ./cmd/server
     cd frontend && npm install && npm run dev
 
-Vite mem-proxy `/api` ke `localhost:8080`, jadi tidak butuh CORS. Di compose, nginx yang mem-proxy `/api` ke service backend.
+Vite proxies `/api` to `localhost:8080`, so CORS is not needed. In compose, nginx proxies `/api` to the backend service.
 
-Reset data: `docker compose down -v`, lalu `up` lagi.
+Reset data: `docker compose down -v`, then `up` again.
 
-## Tes
+## Tests
     cd backend
     TEST_DATABASE_URL=postgres://stockflow:stockflow@localhost:5433/stockflow go test -race ./...
 
-Setiap tes membuat schema Postgres sendiri lalu menghapusnya, jadi data seed tidak tersentuh. `-race` butuh cgo (gcc).
+Each test creates its own Postgres schema and drops it afterward, so the seed data is never touched. `-race` requires cgo (gcc).
 
     cd frontend
     npm test
 
-## Halaman
-- Products: tabel dengan pencarian (debounce), filter All/Active/Inactive/Low stock, paging, adjust stock, riwayat movement, tambah/ubah/hapus produk.
-- Orders: daftar order, buat order, detail order dengan tombol cancel.
-- Kartu ringkasan di atas: total produk, produk aktif, nilai stok, stok rendah (10 atau kurang), penjualan hari ini.
+## Pages
+- Products: table with search (debounced), filters All/Active/Inactive/Low stock, paging, stock adjustment, movement history, add/edit/delete products.
+- Orders: order list, create order, order detail with a cancel button.
+- Summary cards at the top: total products, active products, stock value, low stock (10 or fewer), sales today.
 
-## Contoh curl
+## curl examples
     curl "localhost:8080/api/products?search=beras&page=1&limit=5"
 
     curl -X POST localhost:8080/api/products -d '{"sku":"SNK-CHT-70","name":"Chitato Sapi Panggang 68 g","price":11500,"stock":30}'
@@ -49,32 +49,32 @@ Setiap tes membuat schema Postgres sendiri lalu menghapusnya, jadi data seed tid
 
     curl "localhost:8080/api/reports/daily-sales?date=2026-10-27"
 
-Format error: `{"error":{"code":"INSUFFICIENT_STOCK","message":"...","sku":"...","available":3}}`.
+Error format: `{"error":{"code":"INSUFFICIENT_STOCK","message":"...","sku":"...","available":3}}`.
 
-## Keputusan desain
-- `last_movement_at` dihitung dengan subquery `max(created_at)` pada `stock_movements`, tidak disimpan di baris produk, supaya tidak bisa tidak sinkron.
-- Stok dikurangi dengan `UPDATE ... SET stock = stock - $qty WHERE sku = $sku AND stock >= $qty`. Kalau tidak ada baris yang berubah, transaksi di-rollback dan hasilnya 409. Tidak ada SELECT lalu UPDATE, jadi order bersamaan tidak bisa membuat stok minus. Item diurutkan menurut SKU sebelum di-update supaya dua order tidak saling deadlock.
-- Seluruh order (header, item, pengurangan stok, movement) berada dalam satu transaksi.
-- Cancel order mengunci baris order dengan `FOR UPDATE`, jadi dua cancel bersamaan hanya satu yang berhasil dan yang kedua dapat 409 `ALREADY_CANCELLED`.
-- Hapus produk cukup `DELETE`. Foreign key dari `stock_movements` dan `sales_order_items` menggagalkan penghapusan produk yang punya riwayat, dan error itu dipetakan ke 409 `PRODUCT_HAS_HISTORY`.
-- SKU dinormalisasi ke huruf besar dan di-trim, supaya `abc` dan `ABC` tidak jadi dua produk.
-- Order untuk produk non-aktif ditolak dengan 400.
-- Tambahan di luar kontrak: `GET /api/orders` (daftar order), `GET /api/summary` (kartu ringkasan), parameter `status=active|inactive|low` pada daftar produk, field opsional `stock` saat membuat produk (dicatat sebagai movement "initial stock"), tabel `idempotency_keys` untuk header `Idempotency-Key`.
-- Hari pada laporan penjualan harian memakai zona Asia/Jakarta.
+## Design decisions
+- `last_movement_at` is computed with a subquery on `max(created_at)` from `stock_movements`, not stored on the product row, so it cannot go out of sync.
+- Stock is reduced with `UPDATE ... SET stock = stock - $qty WHERE sku = $sku AND stock >= $qty`. If no row changes, the transaction is rolled back and the response is 409. There is no SELECT followed by UPDATE, so concurrent orders cannot drive stock negative. Items are sorted by SKU before updating so two orders do not deadlock.
+- The entire order (header, items, stock reduction, movements) runs in a single transaction.
+- Cancelling an order locks the order row with `FOR UPDATE`, so when two cancels run at the same time only one succeeds and the second gets 409 `ALREADY_CANCELLED`.
+- Deleting a product is a plain `DELETE`. Foreign keys from `stock_movements` and `sales_order_items` block deletion of products with history, and that error is mapped to 409 `PRODUCT_HAS_HISTORY`.
+- SKUs are normalized to uppercase and trimmed, so `abc` and `ABC` do not become two products.
+- Orders for inactive products are rejected with 400.
+- Extras beyond the contract: `GET /api/orders` (order list), `GET /api/summary` (summary cards), the `status=active|inactive|low` parameter on the product list, an optional `stock` field when creating a product (recorded as an "initial stock" movement), and an `idempotency_keys` table for the `Idempotency-Key` header.
+- The day used in the daily sales report follows the Asia/Jakarta time zone.
 
-## Waktu pengerjaan
-Sekitar 14 jam, waktu ini didapatkan sesuai dengan git log dari proses saya melakukan commit.
+## Time spent
+About 14 hours, based on the git log of my commits.
 
-- Setup repo, skema, seed - 1 jam 
-- Backend Go (API, tes, Dockerfile) - 4 jam 
-- Frontend (setup, client, halaman produk dan order) - 5,5 jam 
-- Kartu ringkasan, tes Vitest, Dockerfile frontend - 3,5 jam
+- Repo setup, schema, seed: 1 hour
+- Go backend (API, tests, Dockerfile): 4 hours
+- Frontend (setup, client, products and orders pages): 5.5 hours
+- Summary cards, Vitest tests, frontend Dockerfile: 3.5 hours
 
-Waktu ini sudah ditambahkan dengan waktu istirahat. 
+These figures include break time.
 
-## Yang akan ditambah
-- Autentikasi (Login/Register) dan peran pengguna.
-- Daftar produk di form order masih maksimal 100 produk aktif, serta perlu pilihan produk dengan pencarian.
-- Pembersihan `idempotency_keys` yang lama.
-- Tes komponen React dan tes E2E.
-- Migrasi dengan tool seperti golang-migrate, karena saat ini file SQL hanya dijalankan saat volume Postgres pertama kali dibuat.
+## Planned additions
+- Authentication (login/register) and user roles.
+- The product list in the order form is currently limited to 100 active products; it needs product selection with search.
+- Cleanup of old rows in `idempotency_keys`.
+- React component tests and E2E tests.
+- Migrations with a tool such as golang-migrate, since the SQL files currently only run when the Postgres volume is first created.
