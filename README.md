@@ -68,7 +68,9 @@ Sekitar 14 jam, waktu ini didapatkan sesuai dengan git log dari proses saya mela
 - Setup repo, skema, seed - 1 jam 
 - Backend Go (API, tes, Dockerfile) - 4 jam 
 - Frontend (setup, client, halaman produk dan order) - 5,5 jam 
-- Kartu ringkasan, tes Vitest, Dockerfile frontend - 3,5 jam 
+- Kartu ringkasan, tes Vitest, Dockerfile frontend - 3,5 jam
+
+Waktu ini sudah ditambahkan dengan waktu istirahat. 
 
 ## Yang akan ditambah
 - Autentikasi (Login/Register) dan peran pengguna.
