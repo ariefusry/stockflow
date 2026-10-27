@@ -65,10 +65,10 @@ Format error: `{"error":{"code":"INSUFFICIENT_STOCK","message":"...","sku":"..."
 ## Waktu pengerjaan
 Sekitar 14 jam, waktu ini didapatkan sesuai dengan git log dari proses saya melakukan commit.
 
-Setup repo, skema, seed - 1 jam 
-Backend Go (API, tes, Dockerfile) - 4 jam 
-Frontend (setup, client, halaman produk dan order) - 5,5 jam 
-Kartu ringkasan, tes Vitest, Dockerfile frontend - 3,5 jam 
+- Setup repo, skema, seed - 1 jam 
+- Backend Go (API, tes, Dockerfile) - 4 jam 
+- Frontend (setup, client, halaman produk dan order) - 5,5 jam 
+- Kartu ringkasan, tes Vitest, Dockerfile frontend - 3,5 jam 
 
 ## Yang akan ditambah
 - Autentikasi (Login/Register) dan peran pengguna.
